@@ -1,0 +1,9 @@
+{
+  "name": "Custom-Spotify-Extended",
+  "description": "Fully customize Spotify from one settings window: wallpapers (image, cover art or Canvas video), transparency, accent colors and gradients, compact hover panels, vinyl mode, custom progress/volume bars, buttons, themes and unlimited presets.",
+  "preview": "preview.png",
+  "main": "custom-spotify-extended.js",
+  "readme": "README.md",
+  "authors": [{ "name": "Natan", "url": "" }],
+  "tags": ["customization", "theme", "wallpaper", "utility"]
+}
