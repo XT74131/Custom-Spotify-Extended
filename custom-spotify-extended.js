@@ -1,7 +1,7 @@
 // NAME: Custom-Spotify-Extended
 // AUTHOR: Natan
 // DESCRIPTION: Customize Spotify: wallpapers, transparency, accent colors, compact panels, vinyl mode, custom bars, buttons, themes and presets.
-// VERSION: 1.0.0
+// VERSION: 1.0.1
 
 (function XTSpotify() {
   // Attend que Spicetify et l'interface soient prêts
@@ -306,11 +306,29 @@
       .marketplace-header { top: 0 !important; background-color: rgba(0,0,0,var(--xt-sticky-op,0)) !important; backdrop-filter: var(--xt-sticky-blur, none); }
       .xt-mkt-hide { visibility: hidden !important; }
       /* Emplacement des onglets du Marketplace (Extensions / Thèmes / Snippets…) */
-      #xt-mkt-tabs { position: fixed; z-index: 61; height: 48px; display: flex; align-items: center; pointer-events: none; }
-      #xt-mkt-tabs .marketplace-tabBar-nav { pointer-events: none; }
-      #xt-mkt-tabs .marketplace-tabBar-headerItem { pointer-events: auto; }
-      #xt-mkt-tabs .marketplace-tabBar-headerItemLink { background: rgba(0,0,0,.35); backdrop-filter: blur(8px); }
-      #xt-mkt-tabs .marketplace-tabBar-active { background: var(--spice-tab-active, rgba(255,255,255,.2)) !important; }
+      /* Onglets du Marketplace : une vraie barre de catégories collée en haut de la page */
+      #xt-mkt-tabs {
+        position: sticky; top: 0; z-index: 20; display: block; width: 100%; box-sizing: border-box;
+        margin: 0 0 16px; padding: 12px 0; -webkit-app-region: no-drag;
+        background: linear-gradient(rgba(18,18,18,.92), rgba(18,18,18,.78)); backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(255,255,255,.08);
+      }
+      #xt-mkt-tabs:not(:has(.marketplace-tabBar)) { display: none; }
+      #xt-mkt-tabs .marketplace-tabBar-nav { width: 100%; pointer-events: auto; -webkit-app-region: no-drag; }
+      #xt-mkt-tabs .marketplace-tabBar-header { display: flex; flex-wrap: nowrap; gap: 8px; margin: 0; padding: 0; list-style: none; width: 100%; }
+      #xt-mkt-tabs .marketplace-tabBar-headerItem { pointer-events: auto; -webkit-app-region: no-drag; flex: none; }
+      #xt-mkt-tabs .marketplace-tabBar-headerItemLink {
+        margin: 0; padding: 8px 18px; border-radius: 999px; background: rgba(255,255,255,.08);
+        color: #fff; transition: background-color .15s ease, color .15s ease; white-space: nowrap;
+      }
+      #xt-mkt-tabs .marketplace-tabBar-headerItemLink:hover { background: rgba(255,255,255,.16); }
+      #xt-mkt-tabs .marketplace-tabBar-active, #xt-mkt-tabs .marketplace-tabBar-active:hover { background: var(--xt-ac-bg, var(--xt-ac1, #1ed760)) !important; color: #000 !important; }
+      #xt-mkt-tabs .Dropdown-root { min-width: 110px; }
+      #xt-mkt-tabs .Dropdown-control { border-radius: 999px; background: rgba(255,255,255,.08); color: #fff; padding: 8px 36px 8px 18px; cursor: pointer; }
+      #xt-mkt-tabs .Dropdown-arrow { top: 15px; }
+      #xt-mkt-tabs .Dropdown-menu { background: #282828; border-radius: 8px; margin-top: 4px; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+      #xt-mkt-tabs .Dropdown-option { color: #ddd; }
+      #xt-mkt-tabs .Dropdown-option:hover { background: rgba(255,255,255,.12); color: #fff; }
       /* ----- Thèmes (menu) ----- */
       #${MENU_ID} .xt-theme-card { display: flex; gap: 12px; align-items: center; background: #252525; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
       #${MENU_ID} .xt-theme-sw { width: 54px; height: 54px; border-radius: 6px; flex: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
@@ -606,7 +624,7 @@
       <button class="xt-reset">${t("reset")}</button>
       <div class="xt-row" style="margin-top:14px"><button class="xt-btn" id="xt-diag">${t("diag")}</button></div>
       <div class="xt-status" id="xt-diag-st"></div>
-      <div class="xt-version">Custom-Spotify-Extended · ${t("version")} 1.0.0</div>
+      <div class="xt-version">Custom-Spotify-Extended · ${t("version")} 1.0.1</div>
       </div>
       </div>
       </div>
@@ -2024,6 +2042,7 @@
     try { if ((Spicetify.Platform.History.location.pathname || "").startsWith("/marketplace")) return true; } catch (e) {}
     return !!document.querySelector(".marketplace-grid, .marketplace-header, #marketplace-update");
   }
+  let mktHost = null;
   function marketplaceCompat() {
     // zone de défilement de la page principale (pour le chargement au fil du défilement)
     const mv = getArea("main-view");
@@ -2035,10 +2054,11 @@
       }
       if (best) best.classList.add("main-view-container__scroll-node");
     }
-    // zone des onglets dans la barre du haut
-    let host = document.getElementById("xt-mkt-tabs");
+    const sn = mv && mv.querySelector(".main-view-container__scroll-node");
+    if (sn && !document.querySelector(".os-viewport")) sn.classList.add("os-viewport");
+    // barre des catégories (Extensions, Thèmes, Snippets…)
     if (!onMarketplace()) {
-      if (host) host.remove();
+      if (mktHost && mktHost.isConnected && !mktHost.querySelector(".marketplace-tabBar")) mktHost.remove();
       document.querySelectorAll(".xt-mkt-hide").forEach((el) => el.classList.remove("xt-mkt-hide"));
       return;
     }
@@ -2046,7 +2066,7 @@
     if (mv) {
       const mr = mv.getBoundingClientRect();
       for (const el of mv.querySelectorAll("div, header")) {
-        if (el.classList.contains("xt-mkt-hide") || el.closest(".marketplace-header") || el.querySelector(".marketplace-header, .marketplace-grid")) continue;
+        if (el.classList.contains("xt-mkt-hide") || el.id === "xt-mkt-tabs" || el.closest("#xt-mkt-tabs, .marketplace-header") || el.querySelector(".marketplace-header, .marketplace-grid, #xt-mkt-tabs")) continue;
         const r = el.getBoundingClientRect();
         if (r.top - mr.top > 10 || r.height < 40 || r.height > 90 || r.width < mr.width * 0.7) continue;
         const pos = getComputedStyle(el).position;
@@ -2056,17 +2076,20 @@
       }
     }
     if (document.querySelector(".main-topBar-topbarContentWrapper:not(#xt-mkt-tabs)")) return; // Spotify l'a encore : rien à faire
-    if (!host) {
-      host = document.createElement("div");
-      host.id = "xt-mkt-tabs";
-      host.className = "main-topBar-topbarContentWrapper";
-      document.body.appendChild(host);
+    // Le Marketplace range ses onglets dans « .main-topBar-topbarContentWrapper » (disparu de Spotify).
+    // On lui fournit cette zone, placée en haut de sa propre page, pleine largeur et collée en haut au défilement.
+    if (!mktHost) {
+      mktHost = document.createElement("div");
+      mktHost.id = "xt-mkt-tabs";
+      mktHost.className = "main-topBar-topbarContentWrapper";
     }
-    const nav = getArea("global-nav"), r = mv ? mv.getBoundingClientRect() : { left: 0 };
-    const navR = nav ? nav.getBoundingClientRect() : { top: 8, height: 64 };
-    const btn = document.getElementById(BTN_ID), br = btn ? btn.getBoundingClientRect() : { right: 0 };
-    host.style.left = Math.round(Math.max(r.left + 8, br.right + 16, 260)) + "px";
-    host.style.top = Math.round(navR.top + (navR.height - 48) / 2) + "px";
+    const page = document.querySelector(".marketplace-header")?.parentElement;
+    if (page) {
+      if (mktHost.parentElement !== page || page.firstElementChild !== mktHost) page.prepend(mktHost);
+    } else if (!mktHost.isConnected && mv) {
+      // page pas encore affichée : on garde la zone prête (cachée tant qu'elle est vide)
+      (mv.querySelector(".main-view-container__scroll-node") || mv).prepend(mktHost);
+    }
   }
 
   // ---------- Boutons du lecteur ----------
